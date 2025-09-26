@@ -1,6 +1,8 @@
 import asyncio
+import importlib
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -13,6 +15,7 @@ from core.database import DatabaseManager
 LOG_DIR = Path("logs")
 BOT_LOG = LOG_DIR / "bot.log"
 ERROR_LOG = LOG_DIR / "errors.log"
+COGS_DIR = Path("cogs")
 PREFIXES_FILE = Path("prefixes.json")
 
 
@@ -87,18 +90,30 @@ def _dynamic_prefix(bot: commands.Bot, message: discord.Message):
     return commands.when_mentioned_or(base_prefix)(bot, message)
 
 
-def iter_cogs() -> list[str]:
-    return [
-        f"cogs.{path.stem}"
-        for path in Path("cogs").glob("*.py")
-        if not path.name.startswith("_")
-    ]
+def discover_cogs() -> list[str]:
+    importlib.invalidate_caches()
+    if not COGS_DIR.exists():
+        return []
+
+    extensions: list[str] = []
+    for filename in os.listdir(COGS_DIR):
+        if not filename.endswith(".py") or filename == "__init__.py":
+            continue
+        extensions.append(f"{COGS_DIR.name}.{Path(filename).stem}")
+
+    return sorted(extensions)
 
 
 async def load_extensions(bot: commands.Bot, logger: logging.Logger) -> None:
-    for extension in iter_cogs():
-        await bot.load_extension(extension)
-        logger.info("Loaded extension %s", extension)
+    for extension in discover_cogs():
+        try:
+            await bot.load_extension(extension)
+        except Exception as exc:  # noqa: BLE001 - we want to surface all load failures
+            print(f"Failed to load cog {extension}: {exc}")
+            logger.exception("Failed to load extension %s", extension)
+        else:
+            print(f"Loaded cog: {extension}")
+            logger.info("Loaded extension %s", extension)
 
 
 async def main() -> None:
@@ -115,6 +130,10 @@ async def main() -> None:
     bot.database = database  # type: ignore[attr-defined]
     bot.logger = logger  # type: ignore[attr-defined]
     bot.prefix_manager = PrefixManager(PREFIXES_FILE, config.prefix)  # type: ignore[attr-defined]
+
+    @bot.event
+    async def on_ready() -> None:
+        print("Bot is online and all cogs are loaded!")
 
     async with bot:
         await bot.database.setup()  # type: ignore[attr-defined]
