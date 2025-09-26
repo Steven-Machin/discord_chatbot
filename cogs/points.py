@@ -1,34 +1,105 @@
 from __future__ import annotations
 
-from typing import Optional
+import asyncio
+import sqlite3
+from typing import List, Optional, Tuple
 
 import discord
 from discord.ext import commands
 
-from core.database import DatabaseManager
-
 
 class Points(commands.Cog):
+    """Track and award user points across servers."""
+
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-
-    @property
-    def database(self) -> DatabaseManager:
-        return self.bot.database  # type: ignore[attr-defined]
+        self.db_path = bot.config.db_path  # type: ignore[attr-defined]
+        self._init_lock = asyncio.Lock()
+        self._is_initialised = False
 
     async def cog_load(self) -> None:
-        await self.database.setup()
+        await self._ensure_database()
+
+    async def _ensure_database(self) -> None:
+        async with self._init_lock:
+            if self._is_initialised:
+                return
+            await asyncio.to_thread(self._initialise)
+            self._is_initialised = True
+
+    def _initialise(self) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS points (
+                    user_id TEXT PRIMARY KEY,
+                    balance INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+            conn.commit()
+
+    async def get_balance(self, user_id: int) -> int:
+        user_key = str(user_id)
+
+        def query() -> int:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute(
+                    "SELECT balance FROM points WHERE user_id = ?",
+                    (user_key,),
+                )
+                row = cursor.fetchone()
+                return int(row[0]) if row else 0
+
+        return await asyncio.to_thread(query)
+
+    async def add_points(self, user_id: int, amount: int) -> int:
+        user_key = str(user_id)
+
+        def execute() -> int:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute(
+                    "SELECT balance FROM points WHERE user_id = ?",
+                    (user_key,),
+                )
+                row = cursor.fetchone()
+                current = int(row[0]) if row else 0
+                new_total = current + amount
+                conn.execute(
+                    "INSERT INTO points (user_id, balance) VALUES (?, ?) "
+                    "ON CONFLICT(user_id) DO UPDATE SET balance=excluded.balance",
+                    (user_key, new_total),
+                )
+                conn.commit()
+                return new_total
+
+        return await asyncio.to_thread(execute)
+
+    async def get_top_users(self, limit: int = 5) -> List[Tuple[str, int]]:
+        def query() -> List[Tuple[str, int]]:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute(
+                    "SELECT user_id, balance FROM points ORDER BY balance DESC, user_id ASC LIMIT ?",
+                    (limit,),
+                )
+                return [(str(row[0]), int(row[1])) for row in cursor.fetchall()]
+
+        return await asyncio.to_thread(query)
 
     @commands.command()
     async def points(self, ctx: commands.Context) -> None:
-        """Display the caller's point balance."""
-        balance = await self.database.get_balance(ctx.author.id)
+        await self._ensure_database()
+        balance = await self.get_balance(ctx.author.id)
+
         embed = discord.Embed(
             title="Your Points",
-            description=f"{ctx.author.mention}, you have **{balance}** points.",
             color=discord.Color.blurple(),
         )
-        embed.set_footer(text=f"Requested by {ctx.author.display_name}")
+        embed.add_field(
+            name=ctx.author.display_name,
+            value=f"Balance: **{balance}**",
+            inline=False,
+        )
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -39,56 +110,82 @@ class Points(commands.Cog):
         member: discord.Member,
         amount: int,
     ) -> None:
-        """Add points to a member. Requires manage_guild permissions."""
         if amount <= 0:
-            await ctx.send("Please provide an amount greater than zero.")
+            await ctx.send("Please provide a positive number of points to add.")
             return
 
-        new_total = await self.database.add_balance(member.id, amount)
-        embed = discord.Embed(
-            title="Points Updated",
-            description=(
-                f"{member.mention} now sits at **{new_total}** points "
-                f"(+{amount} added by {ctx.author.mention})."
-            ),
-            color=discord.Color.gold(),
+        await self._ensure_database()
+        new_total = await self.add_points(member.id, amount)
+
+        embed = discord.Embed(title="Points Updated", color=discord.Color.gold())
+        embed.add_field(
+            name=member.display_name,
+            value=f"New balance: **{new_total}** (added {amount})",
+            inline=False,
         )
+        embed.set_footer(text=f"Awarded by {ctx.author.display_name}")
         await ctx.send(embed=embed)
 
     @commands.command()
     async def leaderboard(self, ctx: commands.Context) -> None:
-        """Show the top five users by point balance."""
-        results = await self.database.leaderboard(limit=5)
-        embed = discord.Embed(
-            title="Points Leaderboard",
-            color=discord.Color.purple(),
-        )
+        await self._ensure_database()
+        top_users = await self.get_top_users(limit=5)
 
-        if not results:
-            embed.description = "No one has earned any points yet. Be the first!"
+        embed = discord.Embed(title="Top 5 Users", color=discord.Color.purple())
+
+        if not top_users:
+            embed.description = "Nobody has any points yet. Start earning points!"
             await ctx.send(embed=embed)
             return
 
-        lines = []
-        for index, (user_id, balance) in enumerate(results, start=1):
-            display_name = await self._resolve_display_name(ctx, user_id)
-            lines.append(f"**{index}.** {display_name} - **{balance}** points")
+        for index, (user_id, balance) in enumerate(top_users, start=1):
+            user_display = await self._resolve_display_name(ctx, user_id)
+            embed.add_field(
+                name=f"{index}. {user_display}",
+                value=f"{balance} points",
+                inline=False,
+            )
 
-        embed.description = "\n".join(lines)
         await ctx.send(embed=embed)
 
-    async def _resolve_display_name(self, ctx: commands.Context, user_id: int) -> str:
-        member: Optional[discord.abc.User] = None
-        if isinstance(ctx.channel, discord.abc.GuildChannel):
-            member = ctx.guild.get_member(user_id) if ctx.guild else None
-        if member is None:
-            member = ctx.bot.get_user(user_id)
-        if member is None:
+    async def _resolve_display_name(self, ctx: commands.Context, user_id: str) -> str:
+        try:
+            numeric_id = int(user_id)
+        except ValueError:
+            return user_id
+
+        user: Optional[discord.abc.User] = ctx.guild.get_member(numeric_id) if ctx.guild else None
+        if user is None:
+            user = self.bot.get_user(numeric_id)
+        if user is None:
             try:
-                member = await ctx.bot.fetch_user(user_id)
-            except discord.DiscordException:
+                user = await self.bot.fetch_user(numeric_id)
+            except discord.HTTPException:
                 return f"User {user_id}"
-        return member.mention if isinstance(member, discord.Member) else member.name
+        return user.display_name if isinstance(user, discord.Member) else user.name
+
+    @addpoints.error
+    async def addpoints_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("You need the manage server permission to award points.")
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send("Couldn't understand that command. Use `!addpoints @user <amount>`." )
+        else:
+            raise error
+
+    @points.error
+    async def points_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+        if isinstance(error, commands.BadArgument):
+            await ctx.send("That didn't look right. Try the command again with valid arguments.")
+        else:
+            raise error
+
+    @leaderboard.error
+    async def leaderboard_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+        if isinstance(error, commands.BadArgument):
+            await ctx.send("Please try that again with valid arguments.")
+        else:
+            raise error
 
 
 async def setup(bot: commands.Bot) -> None:
