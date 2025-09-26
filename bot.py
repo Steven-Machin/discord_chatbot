@@ -3,6 +3,7 @@ import importlib
 import json
 import logging
 import os
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -12,9 +13,9 @@ from discord.ext import commands
 from core.config import load_config
 from core.database import DatabaseManager
 
-LOG_DIR = Path("logs")
-BOT_LOG = LOG_DIR / "bot.log"
-ERROR_LOG = LOG_DIR / "errors.log"
+LOGS_DIR = Path("logs")
+COMMANDS_LOG = LOGS_DIR / "commands.log"
+ERRORS_LOG = LOGS_DIR / "errors.log"
 COGS_DIR = Path("cogs")
 PREFIXES_FILE = Path("prefixes.json")
 
@@ -61,28 +62,45 @@ class PrefixManager:
             self.save()
 
 
-def configure_logging() -> logging.Logger:
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
+def configure_logging() -> tuple[logging.Logger, logging.Logger, logging.Logger]:
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    COMMANDS_LOG.touch(exist_ok=True)
+    ERRORS_LOG.touch(exist_ok=True)
 
-    formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 
-    handlers = [
-        logging.FileHandler(BOT_LOG, encoding="utf-8"),
-        logging.StreamHandler(),
-    ]
-    for handler in handlers:
-        handler.setFormatter(formatter)
+    bot_logger = logging.getLogger("bot")
+    bot_logger.setLevel(logging.INFO)
+    if not bot_logger.handlers:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        bot_logger.addHandler(stream_handler)
 
-    logging.basicConfig(level=logging.INFO, handlers=handlers, force=True)
+    command_logger = logging.getLogger("CommandLogger")
+    command_logger.setLevel(logging.INFO)
+    if not command_logger.handlers:
+        command_handler = RotatingFileHandler(
+            COMMANDS_LOG,
+            maxBytes=1_000_000,
+            backupCount=3,
+            encoding="utf-8",
+        )
+        command_handler.setFormatter(logging.Formatter("%(asctime)s | %(message)s"))
+        command_logger.addHandler(command_handler)
 
-    error_handler = logging.FileHandler(ERROR_LOG, encoding="utf-8")
-    error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(formatter)
-    logging.getLogger().addHandler(error_handler)
+    error_logger = logging.getLogger("ErrorLogger")
+    error_logger.setLevel(logging.ERROR)
+    if not error_logger.handlers:
+        error_handler = RotatingFileHandler(
+            ERRORS_LOG,
+            maxBytes=1_000_000,
+            backupCount=3,
+            encoding="utf-8",
+        )
+        error_handler.setFormatter(formatter)
+        error_logger.addHandler(error_handler)
 
-    return logging.getLogger("bot")
+    return bot_logger, command_logger, error_logger
 
 
 def _dynamic_prefix(bot: commands.Bot, message: discord.Message):
@@ -108,7 +126,7 @@ async def load_extensions(bot: commands.Bot, logger: logging.Logger) -> None:
     for extension in discover_cogs():
         try:
             await bot.load_extension(extension)
-        except Exception as exc:  # noqa: BLE001 - we want to surface all load failures
+        except Exception as exc:  # noqa: BLE001 - surface all load failures
             print(f"Failed to load cog {extension}: {exc}")
             logger.exception("Failed to load extension %s", extension)
         else:
@@ -116,9 +134,23 @@ async def load_extensions(bot: commands.Bot, logger: logging.Logger) -> None:
             logger.info("Loaded extension %s", extension)
 
 
+def _format_location(ctx: commands.Context) -> tuple[str, str]:
+    if ctx.guild:
+        guild = f"{ctx.guild.name} ({ctx.guild.id})"
+        channel = (
+            f"{ctx.channel.name} ({ctx.channel.id})"
+            if isinstance(ctx.channel, discord.abc.GuildChannel)
+            else str(ctx.channel)
+        )
+    else:
+        guild = "Direct Message"
+        channel = str(ctx.channel)
+    return guild, channel
+
+
 async def main() -> None:
     config = load_config()
-    logger = configure_logging()
+    bot_logger, command_logger, error_logger = configure_logging()
 
     intents = discord.Intents.default()
     intents.message_content = True
@@ -128,17 +160,86 @@ async def main() -> None:
     bot = commands.Bot(command_prefix=_dynamic_prefix, intents=intents)
     bot.config = config  # type: ignore[attr-defined]
     bot.database = database  # type: ignore[attr-defined]
-    bot.logger = logger  # type: ignore[attr-defined]
+    bot.logger = bot_logger  # type: ignore[attr-defined]
+    bot.command_logger = command_logger  # type: ignore[attr-defined]
+    bot.error_logger = error_logger  # type: ignore[attr-defined]
     bot.prefix_manager = PrefixManager(PREFIXES_FILE, config.prefix)  # type: ignore[attr-defined]
+
+    @bot.listen("on_command")
+    async def log_command(ctx: commands.Context) -> None:
+        if ctx.command is None:
+            return
+        guild, channel = _format_location(ctx)
+        bot.command_logger.info(
+            "user=%s (%s) | guild=%s | channel=%s | command=%s | content=%s",
+            ctx.author,
+            ctx.author.id,
+            guild,
+            channel,
+            ctx.command.qualified_name,
+            ctx.message.content,
+        )
+
+    @bot.event
+    async def on_command_error(ctx: commands.Context, error: commands.CommandError) -> None:
+        if hasattr(ctx.command, "on_error"):
+            return
+
+        original = getattr(error, "original", error)
+        if isinstance(original, commands.CommandNotFound):
+            return
+
+        if isinstance(original, commands.MissingRequiredArgument):
+            description = f"Missing argument: `{original.param.name}`."
+        elif isinstance(original, commands.BadArgument):
+            description = "I couldn't understand one of the arguments you provided."
+        elif isinstance(original, commands.MissingPermissions):
+            permissions = ", ".join(original.missing_permissions)
+            description = f"You are missing permissions: `{permissions}`."
+        elif isinstance(original, commands.BotMissingPermissions):
+            permissions = ", ".join(original.missing_permissions)
+            description = f"I need these permissions: `{permissions}`."
+        elif isinstance(original, commands.CheckFailure):
+            description = "You don't have permission to run that command."
+        else:
+            description = (
+                "Something went wrong while running that command. "
+                "I've logged the error so the developers can take a look."
+            )
+
+        embed = discord.Embed(
+            title="Uh oh!",
+            description=description,
+            color=discord.Color.red(),
+        )
+        embed.set_footer(text="This message will self-destruct in 20 seconds.")
+
+        try:
+            await ctx.send(embed=embed, delete_after=20)
+        except discord.HTTPException:
+            pass
+
+        guild, channel = _format_location(ctx)
+        bot.error_logger.error(
+            "command=%s | user=%s (%s) | guild=%s | channel=%s | content=%s",
+            ctx.command.qualified_name if ctx.command else "<unknown>",
+            ctx.author,
+            ctx.author.id,
+            guild,
+            channel,
+            ctx.message.content,
+            exc_info=original,
+        )
 
     @bot.event
     async def on_ready() -> None:
         print("Bot is online and all cogs are loaded!")
+        bot.logger.info("%s connected", bot.user)
 
     async with bot:
         await bot.database.setup()  # type: ignore[attr-defined]
-        await load_extensions(bot, logger)
-        logger.info("Starting bot")
+        await load_extensions(bot, bot_logger)
+        bot_logger.info("Starting bot")
         await bot.start(config.token)
 
 

@@ -7,7 +7,7 @@ A production-ready Discord bot demonstrating clean architecture, async workflows
 - Modular cog system for commands, events, and background jobs
 - SQLite persistence with a reusable async database helper
 - Scheduled maintenance task that records timestamps every six hours
-- Friendly error embeds plus structured logging to `logs/bot.log` and `logs/errors.log`
+- Friendly error embeds plus rotating command/error logs in `logs/commands.log` and `logs/errors.log`
 
 ## Requirements
 - Python 3.10+ (recommended)
@@ -20,13 +20,13 @@ core/
   config.py            # Loads BOT_PREFIX, TOKEN, DB_PATH from the .env file
   database.py          # Async helpers for points balance and metadata storage
 cogs/
-  error_handler.py     # Global command error handling and logging
+  error_handler.py     # Command completion auditing via shared logger
   points.py            # Points economy commands and leaderboard embeds
   system.py            # Background save task and !lastsave command
   *.py                 # Additional feature cogs (general, fun, moderation, ...)
 scripts/
   migrate.py           # Lightweight migration runner that bootstraps the database
-logs/                  # Created at runtime for bot and error logs
+logs/                  # Created at runtime for rotating command/error logs
 ```
 
 ## Setup
@@ -64,8 +64,8 @@ logs/                  # Created at runtime for bot and error logs
 - Running `python scripts/migrate.py` is safe to repeat; it ensures tables exist.
 
 ## Error Handling & Logging
-- `cogs.error_handler.ErrorHandler` catches command failures, replies with user-friendly embeds, and logs tracebacks.
-- Standard logs go to the console and `logs/bot.log`; errors additionally land in `logs/errors.log` for auditing.
+- `bot.py` wires rotating file handlers that record every invocation to `logs/commands.log` (1 MB, 3 backups).
+- Failures are captured in `logs/errors.log` with full tracebacks, while users receive friendly embeds in Discord.
 
 ## Extending the Bot
 1. Create a new cog module under `cogs/` and implement `async def setup(bot)`.
