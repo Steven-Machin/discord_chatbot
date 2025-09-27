@@ -40,14 +40,18 @@ class System(commands.Cog):
         embed = discord.Embed(
             title="Welcome!",
             description=(
-                f"Hey {member.mention}, welcome to **{member.guild.name}**!"
-                " We're glad to have you here."
+                f"Hey {member.mention}, welcome to **{member.guild.name}**! "
+                "We're glad to have you here."
             ),
             color=discord.Color.green(),
             timestamp=datetime.now(timezone.utc),
         )
-        embed.set_thumbnail(url=member.avatar.url if member.avatar else discord.Embed.Empty)
-        embed.add_field(name="Member Count", value=str(member.guild.member_count), inline=False)
+        embed.set_thumbnail(url=member.avatar.url if member.avatar else None)
+        embed.add_field(
+            name="Member Count",
+            value=str(member.guild.member_count),
+            inline=False,
+        )
 
         try:
             await channel.send(embed=embed)
@@ -69,14 +73,12 @@ class System(commands.Cog):
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now(timezone.utc).isoformat()
-        old_content = before.content.replace("
-", "\n")
-        new_content = after.content.replace("
-", "\n")
+        old_content = before.content.replace("\n", "\\n")
+        new_content = after.content.replace("\n", "\\n")
+
         log_line = (
             f"{timestamp} | guild={before.guild.id} | channel={before.channel.id} | "
-            f"user={before.author.id} | before={old_content} | after={new_content}
-"
+            f"user={before.author.id} | before={old_content} | after={new_content}\n"
         )
         try:
             with log_path.open("a", encoding="utf-8") as fp:
@@ -106,12 +108,9 @@ class System(commands.Cog):
             await ctx.send("This command can only be used in a server.")
             return
 
-        target_channel = channel
-        if target_channel is None:
-            if isinstance(ctx.channel, discord.TextChannel):
-                target_channel = ctx.channel
-            else:
-                target_channel = ctx.guild.system_channel
+        target_channel = channel or (
+            ctx.channel if isinstance(ctx.channel, discord.TextChannel) else ctx.guild.system_channel
+        )
 
         if target_channel is None:
             await ctx.send("Please specify a text channel I can access.")

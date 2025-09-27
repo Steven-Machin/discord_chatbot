@@ -18,9 +18,9 @@ def load_config() -> BotConfig:
     """Load configuration values from the .env file."""
     load_dotenv()
 
-    token = os.getenv("TOKEN")
+    token = os.getenv("DISCORD_TOKEN") or os.getenv("TOKEN")
     if not token:
-        raise RuntimeError("TOKEN is not set in the environment.")
+        raise RuntimeError("DISCORD_TOKEN is not set in the environment.")
 
     prefix = os.getenv("BOT_PREFIX", "!").strip() or "!"
     db_path_value = os.getenv("DB_PATH", "data/bot.db")

@@ -21,7 +21,7 @@ A production-ready Discord bot demonstrating clean architecture, async workflows
 ```
 bot.py                 # Entry point; wires config, logging, database, and cogs
 core/
-  config.py            # Loads TOKEN, BOT_PREFIX, DB_PATH, and API keys from .env
+  config.py            # Loads DISCORD_TOKEN, BOT_PREFIX, DB_PATH, and API keys from .env
   database.py          # Async helpers for points, guild settings, and metadata
 cogs/
   api.py               # Weather and cryptocurrency commands backed by HTTP APIs
@@ -40,26 +40,32 @@ docker-compose.yml     # Orchestrates the bot with volume mounts for data/logs
 ```
 
 ## Setup
-1. (Optional) create and activate a virtual environment.
-2. Install dependencies:
+1. **Clone the repository**
+   ```bash
+   git clone <your_repo_url> discord-chatbot
+   cd discord-chatbot
+   ```
+2. **Create a virtual environment**
+   ```bash
+   python -m venv venv
+   ```
+3. **Activate the environment**
+   - Windows: `venv\Scripts\activate`
+   - macOS/Linux: `source venv/bin/activate`
+4. **Install dependencies inside the venv**
    ```bash
    pip install -r requirements.txt
    ```
-3. Copy `.env` and configure the following values:
-   ```env
-   BOT_PREFIX=!
-   TOKEN=your-discord-token
-   DB_PATH=data/bot.db
-   OPENWEATHER_KEY=your-openweather-key  # optional, required for !weather
-   ```
-4. Initialise the database (tables are created automatically):
+5. **Configure environment variables**
    ```bash
-   python scripts/migrate.py
+   cp .env.example .env  # use `copy .env.example .env` on Windows PowerShell
    ```
-5. Run the bot:
+   Edit `.env` and provide values for `DISCORD_TOKEN`, `OPENWEATHER_KEY`, and `DB_PATH`.
+6. **Run the bot**
    ```bash
    python bot.py
    ```
+   *(Optional)* Initialise the database ahead of time with `python scripts/migrate.py`.
 
 ## Command Reference
 - `!hello`, `/hello` - Friendly greeting embeds

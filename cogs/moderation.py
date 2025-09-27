@@ -22,8 +22,10 @@ class Moderation(commands.Cog):
             role_id = await self.database.get_admin_role_id(guild.id)
         else:
             role_id = await self.database.get_moderator_role_id(guild.id)
+
         if role_id is None:
             return None
+
         role = guild.get_role(role_id)
         if role is None:
             if admin:
@@ -71,7 +73,11 @@ class Moderation(commands.Cog):
             await self.database.set_moderator_role(ctx.guild.id, role.id)
             description = f"Moderator role set to {role.mention}."
 
-        embed = discord.Embed(title="Moderator Role Updated", description=description, color=discord.Color.blue())
+        embed = discord.Embed(
+            title="Moderator Role Updated",
+            description=description,
+            color=discord.Color.blue(),
+        )
         await ctx.send(embed=embed)
 
     @commands.command(name="setadminrole")
@@ -92,7 +98,11 @@ class Moderation(commands.Cog):
             await self.database.set_admin_role(ctx.guild.id, role.id)
             description = f"Administrator role set to {role.mention}."
 
-        embed = discord.Embed(title="Administrator Role Updated", description=description, color=discord.Color.dark_blue())
+        embed = discord.Embed(
+            title="Administrator Role Updated",
+            description=description,
+            color=discord.Color.dark_blue(),
+        )
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -131,8 +141,10 @@ class Moderation(commands.Cog):
 
         embed = discord.Embed(
             title="Member Kicked",
-            description=f"{member.mention} was kicked.
-Reason: {reason or 'No reason provided.'}",
+            description=(
+                f"{member.mention} was kicked.\n"
+                f"Reason: {reason or 'No reason provided.'}"
+            ),
             color=discord.Color.orange(),
         )
         await ctx.send(embed=embed)
@@ -173,8 +185,10 @@ Reason: {reason or 'No reason provided.'}",
 
         embed = discord.Embed(
             title="Member Banned",
-            description=f"{member.mention} was banned.
-Reason: {reason or 'No reason provided.'}",
+            description=(
+                f"{member.mention} was banned.\n"
+                f"Reason: {reason or 'No reason provided.'}"
+            ),
             color=discord.Color.red(),
         )
         await ctx.send(embed=embed)

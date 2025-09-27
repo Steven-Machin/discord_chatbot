@@ -1,6 +1,7 @@
-discord.py
-python-dotenv
-aiohttp
-pytest
-pytest-asyncio
-flake8
+discord.py>=2.4.0
+python-dotenv>=1.0.1
+aiohttp>=3.9.5
+types-discord-py>=2.4.0.20240820
+pytest>=8.4.0
+pytest-asyncio>=0.24.0
+flake8>=7.1.0
