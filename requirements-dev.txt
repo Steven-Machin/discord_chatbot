@@ -1,0 +1,7 @@
+-r requirements.txt
+types-discord-py
+pytest
+pytest-asyncio
+flake8
+black
+mypy

@@ -98,6 +98,13 @@ docker-compose.yml     # Orchestrates the bot with volume mounts for data/logs
 - New members trigger a welcome embed in the configured channel (or fall back to `#general` / the guild system channel).
 - Edited messages are appended to `logs/activity.log` with before/after content for moderation review.
 
+
+## Development Setup
+- Install runtime dependencies: `pip install -r requirements.txt`
+- Install development dependencies: `pip install -r requirements-dev.txt`
+- Lint the code: `flake8 .`
+- Run the test suite: `pytest`
+- Type-check with mypy: `mypy --ignore-missing-imports .`
 ## Testing
 Run the automated test suite (requires `pytest` and `pytest-asyncio`, already listed in `requirements.txt`):
 ```bash
