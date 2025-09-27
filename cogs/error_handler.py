@@ -1,36 +1,45 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import discord
 from discord.ext import commands
 
 
 class ErrorHandler(commands.Cog):
-    """Supplemental logging hooks for command completion."""
+    """A cog for handling errors globally."""
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_command_completion(self, ctx: commands.Context) -> None:
-        if ctx.command is None:
+    async def on_command_error(
+        self,
+        ctx: commands.Context,
+        error: commands.CommandError,
+    ) -> None:
+        """Handle errors from commands globally."""
+        if isinstance(error, commands.CommandNotFound):
+            # ignore unknown commands
             return
-        guild = f"{ctx.guild.name} ({ctx.guild.id})" if ctx.guild else "Direct Message"
-        channel = (
-            f"{ctx.channel.name} ({ctx.channel.id})"
-            if isinstance(ctx.channel, discord.abc.GuildChannel)
-            else str(ctx.channel)
-        )
-        self.bot.logger.info(
-            "Command completed | command=%s | user=%s (%s) | guild=%s | channel=%s",
-            ctx.command.qualified_name,
-            ctx.author,
-            ctx.author.id,
-            guild,
-            channel,
-        )
+
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("You don’t have permission to use this command.")
+            return
+
+        if isinstance(error, commands.BotMissingPermissions):
+            await ctx.send("I don’t have the required permissions to do that.")
+            return
+
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(f"Missing argument: `{error.param.name}`")
+            return
+
+        # fallback: log + notify
+        await ctx.send("An unexpected error occurred. Please try again later.")
+        # If you have a logger on bot, log it
+        if hasattr(self.bot, "logger"):
+            self.bot.logger.exception("Unhandled command error", exc_info=error)
 
 
 async def setup(bot: commands.Bot) -> None:
+    """Load the cog."""
     await bot.add_cog(ErrorHandler(bot))
