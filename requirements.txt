@@ -1,2 +1,6 @@
-﻿discord.py
+discord.py
 python-dotenv
+aiohttp
+pytest
+pytest-asyncio
+flake8

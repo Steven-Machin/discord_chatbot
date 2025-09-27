@@ -1,11 +1,10 @@
 import asyncio
 import importlib
-import json
 import logging
 import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import discord
 from discord.ext import commands
@@ -16,56 +15,15 @@ from core.database import DatabaseManager
 LOGS_DIR = Path("logs")
 COMMANDS_LOG = LOGS_DIR / "commands.log"
 ERRORS_LOG = LOGS_DIR / "errors.log"
+ACTIVITY_LOG = LOGS_DIR / "activity.log"
 COGS_DIR = Path("cogs")
-PREFIXES_FILE = Path("prefixes.json")
-
-
-class PrefixManager:
-    def __init__(self, path: Path, default_prefix: str) -> None:
-        self.path = path
-        self._default = default_prefix
-        self._prefixes = self._load()
-
-    @property
-    def default(self) -> str:
-        return self._default
-
-    def _load(self) -> Dict[str, str]:
-        if not self.path.exists():
-            self.path.write_text("{}", encoding="utf-8")
-            return {}
-        try:
-            data = self.path.read_text(encoding="utf-8")
-            raw_prefixes = json.loads(data)
-            if isinstance(raw_prefixes, dict):
-                return {str(key): str(value) for key, value in raw_prefixes.items()}
-        except json.JSONDecodeError:
-            logging.getLogger("bot").warning("Prefix file corrupt, resetting to defaults.")
-        self.path.write_text("{}", encoding="utf-8")
-        return {}
-
-    def save(self) -> None:
-        self.path.write_text(json.dumps(self._prefixes, indent=2), encoding="utf-8")
-
-    def get(self, guild_id: Optional[int]) -> str:
-        if guild_id is None:
-            return self.default
-        return self._prefixes.get(str(guild_id), self.default)
-
-    def set(self, guild_id: int, prefix: str) -> None:
-        self._prefixes[str(guild_id)] = prefix
-        self.save()
-
-    def reset(self, guild_id: int) -> None:
-        if str(guild_id) in self._prefixes:
-            self._prefixes.pop(str(guild_id))
-            self.save()
 
 
 def configure_logging() -> tuple[logging.Logger, logging.Logger, logging.Logger]:
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
     COMMANDS_LOG.touch(exist_ok=True)
     ERRORS_LOG.touch(exist_ok=True)
+    ACTIVITY_LOG.touch(exist_ok=True)
 
     formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 
@@ -103,8 +61,9 @@ def configure_logging() -> tuple[logging.Logger, logging.Logger, logging.Logger]
     return bot_logger, command_logger, error_logger
 
 
-def _dynamic_prefix(bot: commands.Bot, message: discord.Message):
-    base_prefix = bot.prefix_manager.get(message.guild.id if message.guild else None)
+async def _dynamic_prefix(bot: commands.Bot, message: discord.Message):
+    guild_id: Optional[int] = message.guild.id if message.guild else None
+    base_prefix = await bot.database.get_prefix(guild_id)  # type: ignore[attr-defined]
     return commands.when_mentioned_or(base_prefix)(bot, message)
 
 
@@ -154,8 +113,9 @@ async def main() -> None:
 
     intents = discord.Intents.default()
     intents.message_content = True
+    intents.members = True
 
-    database = DatabaseManager(config.db_path)
+    database = DatabaseManager(config.db_path, config.prefix)
 
     bot = commands.Bot(command_prefix=_dynamic_prefix, intents=intents)
     bot.config = config  # type: ignore[attr-defined]
@@ -163,7 +123,8 @@ async def main() -> None:
     bot.logger = bot_logger  # type: ignore[attr-defined]
     bot.command_logger = command_logger  # type: ignore[attr-defined]
     bot.error_logger = error_logger  # type: ignore[attr-defined]
-    bot.prefix_manager = PrefixManager(PREFIXES_FILE, config.prefix)  # type: ignore[attr-defined]
+    bot.activity_log_path = ACTIVITY_LOG  # type: ignore[attr-defined]
+    bot._slash_synced = False  # type: ignore[attr-defined]  # noqa: SLF001
 
     @bot.listen("on_command")
     async def log_command(ctx: commands.Context) -> None:
@@ -235,6 +196,15 @@ async def main() -> None:
     async def on_ready() -> None:
         print("Bot is online and all cogs are loaded!")
         bot.logger.info("%s connected", bot.user)
+        if not getattr(bot, "_slash_synced", False):  # type: ignore[attr-defined]
+            try:
+                synced = await bot.tree.sync()
+            except Exception:
+                bot.logger.exception("Failed to sync application commands")
+            else:
+                bot.logger.info("Synced %s application commands", len(synced))
+            finally:
+                bot._slash_synced = True  # type: ignore[attr-defined]
 
     async with bot:
         await bot.database.setup()  # type: ignore[attr-defined]

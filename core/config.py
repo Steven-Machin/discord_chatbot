@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import os
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -10,6 +11,7 @@ class BotConfig:
     token: str
     prefix: str
     db_path: Path
+    openweather_api_key: Optional[str]
 
 
 def load_config() -> BotConfig:
@@ -25,4 +27,13 @@ def load_config() -> BotConfig:
     db_path = Path(db_path_value).expanduser().resolve()
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    return BotConfig(token=token, prefix=prefix, db_path=db_path)
+    openweather_key = os.getenv("OPENWEATHER_API_KEY")
+    if openweather_key:
+        openweather_key = openweather_key.strip() or None
+
+    return BotConfig(
+        token=token,
+        prefix=prefix,
+        db_path=db_path,
+        openweather_api_key=openweather_key,
+    )

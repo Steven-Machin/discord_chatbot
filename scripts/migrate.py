@@ -6,7 +6,7 @@ from core.database import DatabaseManager
 
 async def main() -> None:
     config = load_config()
-    db = DatabaseManager(config.db_path)
+    db = DatabaseManager(config.db_path, config.prefix)
     await db.setup()
     print(f"Database ready at {config.db_path}")
 
