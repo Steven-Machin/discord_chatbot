@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import discord
 from discord.ext import commands
 
 
@@ -35,7 +34,6 @@ class ErrorHandler(commands.Cog):
 
         # fallback: log + notify
         await ctx.send("An unexpected error occurred. Please try again later.")
-        # If you have a logger on bot, log it
         if hasattr(self.bot, "logger"):
             self.bot.logger.exception("Unhandled command error", exc_info=error)
 
