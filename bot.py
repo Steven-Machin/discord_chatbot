@@ -25,7 +25,9 @@ def configure_logging() -> tuple[logging.Logger, logging.Logger, logging.Logger]
     ERRORS_LOG.touch(exist_ok=True)
     ACTIVITY_LOG.touch(exist_ok=True)
 
-    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+    )
 
     bot_logger = logging.getLogger("bot")
     bot_logger.setLevel(logging.INFO)
@@ -142,7 +144,9 @@ async def main() -> None:
         )
 
     @bot.event
-    async def on_command_error(ctx: commands.Context, error: commands.CommandError) -> None:
+    async def on_command_error(
+        ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         if hasattr(ctx.command, "on_error"):
             return
 

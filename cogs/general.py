@@ -21,7 +21,9 @@ class General(commands.Cog):
         embed = self._build_hello_embed(ctx.author.display_name)
         await ctx.send(embed=embed)
 
-    @app_commands.command(name="hello", description="Get a friendly hello from the bot.")
+    @app_commands.command(
+        name="hello", description="Get a friendly hello from the bot."
+    )
     async def hello_slash(self, interaction: discord.Interaction) -> None:
         embed = self._build_hello_embed(interaction.user.display_name)
         await interaction.response.send_message(embed=embed)

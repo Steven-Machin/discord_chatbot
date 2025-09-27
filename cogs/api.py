@@ -36,7 +36,9 @@ class Api(commands.Cog):
 
         url = f"{COINGECKO_API}/coins/list"
         try:
-            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as response:
+            async with self.session.get(
+                url, timeout=aiohttp.ClientTimeout(total=15)
+            ) as response:
                 response.raise_for_status()
                 payload = await response.json()
         except aiohttp.ClientError:
@@ -58,19 +60,25 @@ class Api(commands.Cog):
     async def weather(self, ctx: commands.Context, *, city: str) -> None:
         api_key = self.bot.config.openweather_api_key  # type: ignore[attr-defined]
         if not api_key:
-            await ctx.send("Set OPENWEATHER_KEY in your environment to enable weather lookups.")
+            await ctx.send(
+                "Set OPENWEATHER_KEY in your environment to enable weather lookups."
+            )
             return
 
         params = {"q": city, "appid": api_key, "units": "metric"}
         try:
-            async with self.session.get(OPENWEATHER_API, params=params, timeout=aiohttp.ClientTimeout(total=15)) as response:
+            async with self.session.get(
+                OPENWEATHER_API, params=params, timeout=aiohttp.ClientTimeout(total=15)
+            ) as response:
                 if response.status == 404:
                     await ctx.send("I couldn't find that city.")
                     return
                 response.raise_for_status()
                 data = await response.json()
         except aiohttp.ClientError as exc:
-            await ctx.send("I couldn't reach the weather service. Please try again later.")
+            await ctx.send(
+                "I couldn't reach the weather service. Please try again later."
+            )
             self.bot.logger.exception("Weather lookup failed", exc_info=exc)  # type: ignore[attr-defined]
             return
 
@@ -82,10 +90,20 @@ class Api(commands.Cog):
             title=f"Weather in {data.get('name', city).title()}",
             color=discord.Color.blue(),
         )
-        embed.add_field(name="Condition", value=weather_info.get("description", "Unknown").title(), inline=False)
-        embed.add_field(name="Temperature", value=f"{main.get('temp', '?')} C", inline=True)
-        embed.add_field(name="Feels Like", value=f"{main.get('feels_like', '?')} C", inline=True)
-        embed.add_field(name="Humidity", value=f"{main.get('humidity', '?')}%", inline=True)
+        embed.add_field(
+            name="Condition",
+            value=weather_info.get("description", "Unknown").title(),
+            inline=False,
+        )
+        embed.add_field(
+            name="Temperature", value=f"{main.get('temp', '?')} C", inline=True
+        )
+        embed.add_field(
+            name="Feels Like", value=f"{main.get('feels_like', '?')} C", inline=True
+        )
+        embed.add_field(
+            name="Humidity", value=f"{main.get('humidity', '?')}%", inline=True
+        )
         embed.add_field(name="Wind", value=f"{wind.get('speed', '?')} m/s", inline=True)
         await ctx.send(embed=embed)
 
@@ -94,7 +112,9 @@ class Api(commands.Cog):
         try:
             await self._ensure_coin_map()
         except aiohttp.ClientError as exc:
-            await ctx.send("I couldn't reach the crypto service. Please try again later.")
+            await ctx.send(
+                "I couldn't reach the crypto service. Please try again later."
+            )
             self.bot.logger.exception("CoinGecko listing fetch failed", exc_info=exc)  # type: ignore[attr-defined]
             return
 
@@ -116,11 +136,15 @@ class Api(commands.Cog):
         }
         url = f"{COINGECKO_API}/simple/price"
         try:
-            async with self.session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as response:
+            async with self.session.get(
+                url, params=params, timeout=aiohttp.ClientTimeout(total=10)
+            ) as response:
                 response.raise_for_status()
                 data = await response.json()
         except aiohttp.ClientError as exc:
-            await ctx.send("I couldn't reach the crypto service. Please try again later.")
+            await ctx.send(
+                "I couldn't reach the crypto service. Please try again later."
+            )
             self.bot.logger.exception("Crypto lookup failed", exc_info=exc)  # type: ignore[attr-defined]
             return
 
@@ -135,7 +159,11 @@ class Api(commands.Cog):
 
         embed = discord.Embed(title=f"{coin_name}", color=discord.Color.gold())
         embed.add_field(name="Symbol", value=symbol.upper(), inline=True)
-        embed.add_field(name="Price (USD)", value=f"${price:,.2f}" if isinstance(price, (int, float)) else "?", inline=True)
+        embed.add_field(
+            name="Price (USD)",
+            value=f"${price:,.2f}" if isinstance(price, (int, float)) else "?",
+            inline=True,
+        )
         embed.add_field(name="24h Change", value=change_text, inline=True)
         await ctx.send(embed=embed)
 

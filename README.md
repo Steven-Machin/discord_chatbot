@@ -105,6 +105,11 @@ docker-compose.yml     # Orchestrates the bot with volume mounts for data/logs
 - Lint the code: `flake8 .`
 - Run the test suite: `pytest`
 - Type-check with mypy: `mypy --ignore-missing-imports .`
+
+## Code Style
+- This project uses [Black](https://black.readthedocs.io/) for automatic formatting. Run `black .` before committing changes.
+- `flake8` enforces additional linting rules with a 120 character line-length cap.
+- CI runs `black --check .` and `flake8 .`; match that locally to avoid surprises.
 ## Testing
 Run the automated test suite (requires `pytest` and `pytest-asyncio`, already listed in `requirements.txt`):
 ```bash

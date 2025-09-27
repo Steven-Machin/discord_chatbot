@@ -65,7 +65,9 @@ class DatabaseManager:
             )
             conn.commit()
 
-    def _row_to_settings(self, guild_id: int, row: Optional[sqlite3.Row]) -> GuildSettings:
+    def _row_to_settings(
+        self, guild_id: int, row: Optional[sqlite3.Row]
+    ) -> GuildSettings:
         if row is None:
             return GuildSettings(
                 guild_id=guild_id,
@@ -77,12 +79,22 @@ class DatabaseManager:
         return GuildSettings(
             guild_id=int(row["guild_id"]),
             prefix=row["prefix"],
-            welcome_channel_id=(int(row["welcome_channel_id"]) if row["welcome_channel_id"] is not None else None),
-            mod_role_id=(int(row["mod_role_id"]) if row["mod_role_id"] is not None else None),
-            admin_role_id=(int(row["admin_role_id"]) if row["admin_role_id"] is not None else None),
+            welcome_channel_id=(
+                int(row["welcome_channel_id"])
+                if row["welcome_channel_id"] is not None
+                else None
+            ),
+            mod_role_id=(
+                int(row["mod_role_id"]) if row["mod_role_id"] is not None else None
+            ),
+            admin_role_id=(
+                int(row["admin_role_id"]) if row["admin_role_id"] is not None else None
+            ),
         )
 
-    async def get_guild_settings(self, guild_id: int, *, use_cache: bool = True) -> GuildSettings:
+    async def get_guild_settings(
+        self, guild_id: int, *, use_cache: bool = True
+    ) -> GuildSettings:
         await self.setup()
         if use_cache:
             cached = self._settings_cache.get(guild_id)
@@ -103,7 +115,9 @@ class DatabaseManager:
         self._settings_cache[guild_id] = settings
         return settings
 
-    async def _upsert_guild_fields(self, guild_id: int, values: Dict[str, Optional[Any]]) -> None:
+    async def _upsert_guild_fields(
+        self, guild_id: int, values: Dict[str, Optional[Any]]
+    ) -> None:
         if not values:
             return
         await self.setup()
@@ -112,7 +126,9 @@ class DatabaseManager:
             with sqlite3.connect(self.path) as conn:
                 columns = ", ".join(values.keys())
                 placeholders = ", ".join("?" for _ in values)
-                update_clause = ", ".join(f"{column}=excluded.{column}" for column in values)
+                update_clause = ", ".join(
+                    f"{column}=excluded.{column}" for column in values
+                )
                 conn.execute(
                     f"INSERT INTO guild_settings (guild_id, {columns}) VALUES (?, {placeholders}) "
                     f"ON CONFLICT(guild_id) DO UPDATE SET {update_clause}",
@@ -123,7 +139,9 @@ class DatabaseManager:
         await asyncio.to_thread(execute)
         self._settings_cache.pop(guild_id, None)
 
-    async def set_guild_prefix(self, guild_id: int, prefix: Optional[str]) -> GuildSettings:
+    async def set_guild_prefix(
+        self, guild_id: int, prefix: Optional[str]
+    ) -> GuildSettings:
         normalised = prefix.strip() if isinstance(prefix, str) else None
         await self._upsert_guild_fields(guild_id, {"prefix": normalised or None})
         return await self.get_guild_settings(guild_id, use_cache=False)
@@ -138,15 +156,21 @@ class DatabaseManager:
         settings = await self.get_guild_settings(guild_id)
         return settings.prefix or self.default_prefix
 
-    async def set_welcome_channel(self, guild_id: int, channel_id: Optional[int]) -> GuildSettings:
+    async def set_welcome_channel(
+        self, guild_id: int, channel_id: Optional[int]
+    ) -> GuildSettings:
         await self._upsert_guild_fields(guild_id, {"welcome_channel_id": channel_id})
         return await self.get_guild_settings(guild_id, use_cache=False)
 
-    async def set_moderator_role(self, guild_id: int, role_id: Optional[int]) -> GuildSettings:
+    async def set_moderator_role(
+        self, guild_id: int, role_id: Optional[int]
+    ) -> GuildSettings:
         await self._upsert_guild_fields(guild_id, {"mod_role_id": role_id})
         return await self.get_guild_settings(guild_id, use_cache=False)
 
-    async def set_admin_role(self, guild_id: int, role_id: Optional[int]) -> GuildSettings:
+    async def set_admin_role(
+        self, guild_id: int, role_id: Optional[int]
+    ) -> GuildSettings:
         await self._upsert_guild_fields(guild_id, {"admin_role_id": role_id})
         return await self.get_guild_settings(guild_id, use_cache=False)
 
@@ -167,7 +191,9 @@ class DatabaseManager:
 
         def execute() -> None:
             with sqlite3.connect(self.path) as conn:
-                conn.execute("DELETE FROM guild_settings WHERE guild_id = ?", (guild_id,))
+                conn.execute(
+                    "DELETE FROM guild_settings WHERE guild_id = ?", (guild_id,)
+                )
                 conn.commit()
 
         await asyncio.to_thread(execute)

@@ -154,7 +154,9 @@ class Points(commands.Cog):
         except ValueError:
             return user_id
 
-        user: Optional[discord.abc.User] = ctx.guild.get_member(numeric_id) if ctx.guild else None
+        user: Optional[discord.abc.User] = (
+            ctx.guild.get_member(numeric_id) if ctx.guild else None
+        )
         if user is None:
             user = self.bot.get_user(numeric_id)
         if user is None:
@@ -165,23 +167,33 @@ class Points(commands.Cog):
         return user.display_name if isinstance(user, discord.Member) else user.name
 
     @addpoints.error
-    async def addpoints_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+    async def addpoints_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         if isinstance(error, commands.MissingPermissions):
             await ctx.send("You need the manage server permission to award points.")
         elif isinstance(error, commands.BadArgument):
-            await ctx.send("Couldn't understand that command. Use `!addpoints @user <amount>`." )
+            await ctx.send(
+                "Couldn't understand that command. Use `!addpoints @user <amount>`."
+            )
         else:
             raise error
 
     @points.error
-    async def points_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+    async def points_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         if isinstance(error, commands.BadArgument):
-            await ctx.send("That didn't look right. Try the command again with valid arguments.")
+            await ctx.send(
+                "That didn't look right. Try the command again with valid arguments."
+            )
         else:
             raise error
 
     @leaderboard.error
-    async def leaderboard_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+    async def leaderboard_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         if isinstance(error, commands.BadArgument):
             await ctx.send("Please try that again with valid arguments.")
         else:

@@ -109,7 +109,9 @@ class System(commands.Cog):
             return
 
         target_channel = channel or (
-            ctx.channel if isinstance(ctx.channel, discord.TextChannel) else ctx.guild.system_channel
+            ctx.channel
+            if isinstance(ctx.channel, discord.TextChannel)
+            else ctx.guild.system_channel
         )
 
         if target_channel is None:
