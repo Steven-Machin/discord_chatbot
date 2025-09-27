@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import asyncio
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import aiohttp
 import discord
@@ -16,7 +15,7 @@ class Api(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self._session: Optional[aiohttp.ClientSession] = None
-        self._coin_map: Optional[Dict[str, str]] = None
+        self._coin_map: Optional[Dict[str, Tuple[str, str]]] = None
 
     async def cog_load(self) -> None:
         self._session = aiohttp.ClientSession()
@@ -44,20 +43,22 @@ class Api(commands.Cog):
             self._coin_map = {}
             raise
 
-        mapping: Dict[str, str] = {}
+        mapping: Dict[str, Tuple[str, str]] = {}
         for entry in payload:
             symbol = entry.get("symbol")
             coin_id = entry.get("id")
+            name = entry.get("name")
             if not symbol or not coin_id:
                 continue
-            mapping.setdefault(symbol.lower(), coin_id)
+            display_name = name.strip() if isinstance(name, str) else symbol.upper()
+            mapping.setdefault(symbol.lower(), (coin_id, display_name))
         self._coin_map = mapping
 
     @commands.command(name="weather")
     async def weather(self, ctx: commands.Context, *, city: str) -> None:
         api_key = self.bot.config.openweather_api_key  # type: ignore[attr-defined]
         if not api_key:
-            await ctx.send("OpenWeather API key is not configured.")
+            await ctx.send("Set OPENWEATHER_KEY in your environment to enable weather lookups.")
             return
 
         params = {"q": city, "appid": api_key, "units": "metric"}
@@ -82,8 +83,8 @@ class Api(commands.Cog):
             color=discord.Color.blue(),
         )
         embed.add_field(name="Condition", value=weather_info.get("description", "Unknown").title(), inline=False)
-        embed.add_field(name="Temperature", value=f"{main.get('temp', '?')}?C", inline=True)
-        embed.add_field(name="Feels Like", value=f"{main.get('feels_like', '?')}?C", inline=True)
+        embed.add_field(name="Temperature", value=f"{main.get('temp', '?')} C", inline=True)
+        embed.add_field(name="Feels Like", value=f"{main.get('feels_like', '?')} C", inline=True)
         embed.add_field(name="Humidity", value=f"{main.get('humidity', '?')}%", inline=True)
         embed.add_field(name="Wind", value=f"{wind.get('speed', '?')} m/s", inline=True)
         await ctx.send(embed=embed)
@@ -101,10 +102,12 @@ class Api(commands.Cog):
             await ctx.send("CoinGecko data is unavailable right now.")
             return
 
-        coin_id = self._coin_map.get(symbol.lower())
-        if not coin_id:
+        mapping = self._coin_map.get(symbol.lower())
+        if not mapping:
             await ctx.send("I don't recognise that cryptocurrency symbol.")
             return
+
+        coin_id, coin_name = mapping
 
         params = {
             "ids": coin_id,
@@ -130,7 +133,8 @@ class Api(commands.Cog):
         change = prices.get("usd_24h_change")
         change_text = f"{change:+.2f}%" if isinstance(change, (int, float)) else "?"
 
-        embed = discord.Embed(title=f"{symbol.upper()} Price", color=discord.Color.gold())
+        embed = discord.Embed(title=f"{coin_name}", color=discord.Color.gold())
+        embed.add_field(name="Symbol", value=symbol.upper(), inline=True)
         embed.add_field(name="Price (USD)", value=f"${price:,.2f}" if isinstance(price, (int, float)) else "?", inline=True)
         embed.add_field(name="24h Change", value=change_text, inline=True)
         await ctx.send(embed=embed)

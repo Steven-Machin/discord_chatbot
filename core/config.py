@@ -27,7 +27,7 @@ def load_config() -> BotConfig:
     db_path = Path(db_path_value).expanduser().resolve()
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    openweather_key = os.getenv("OPENWEATHER_API_KEY")
+    openweather_key = os.getenv("OPENWEATHER_KEY") or os.getenv("OPENWEATHER_API_KEY")
     if openweather_key:
         openweather_key = openweather_key.strip() or None
 

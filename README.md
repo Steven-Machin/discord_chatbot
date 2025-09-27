@@ -50,7 +50,7 @@ docker-compose.yml     # Orchestrates the bot with volume mounts for data/logs
    BOT_PREFIX=!
    TOKEN=your-discord-token
    DB_PATH=data/bot.db
-   OPENWEATHER_API_KEY=your-openweather-key  # optional, required for !weather
+   OPENWEATHER_KEY=your-openweather-key  # optional, required for !weather
    ```
 4. Initialise the database (tables are created automatically):
    ```bash
@@ -62,16 +62,22 @@ docker-compose.yml     # Orchestrates the bot with volume mounts for data/logs
    ```
 
 ## Command Reference
-- `!hello`, `/hello` – Friendly greeting embeds
-- `!ping` – Round-trip latency check
-- `!setprefix <prefix>` – Update the guild prefix (aliases: `!prefix`)
-- `!setwelcome [#channel]` – Choose which channel receives welcome embeds
-- `!setmodrole [@role]` / `!setadminrole [@role]` – Configure moderation role requirements (omit the role to clear)
-- `!weather <city>` – Fetch current conditions via OpenWeather
-- `!crypto <symbol>` – Fetch USD pricing and 24h delta via CoinGecko (e.g. `!crypto btc`)
-- `!points`, `!addpoints @user <amount>`, `!leaderboard` – Points economy commands
-- `!lastsave` – Report when the scheduled background save last executed
+- `!hello`, `/hello` - Friendly greeting embeds
+- `!ping` - Round-trip latency check
+- `!setprefix <prefix>` - Update the guild prefix (aliases: `!prefix`)
+- `!setwelcome [#channel]` - Choose which channel receives welcome embeds
+- `!setmodrole [@role]` / `!setadminrole [@role]` - Configure moderation role requirements (omit the role to clear)
+- `!weather <city>` - Fetch current conditions via OpenWeather
+- `!crypto <symbol>` - Fetch USD pricing and 24h delta via CoinGecko (e.g. `!crypto btc`)
+- `!points`, `!addpoints @user <amount>`, `!leaderboard` - Points economy commands
+- `!lastsave` - Report when the scheduled background save last executed
 - Standard moderation commands: `!kick`, `!ban`, `!unban`
+
+### API command examples
+```text
+!weather London
+!crypto btc
+```
 
 ## Server Configuration & Permissions
 - Prefixes, welcome channels, and moderation role requirements are stored per guild in SQLite (`guild_settings` table).
@@ -79,8 +85,8 @@ docker-compose.yml     # Orchestrates the bot with volume mounts for data/logs
 - When an administrator role is configured, users must hold it to use `!ban` and `!unban`.
 
 ## API Integrations
-- **OpenWeather**: Supply `OPENWEATHER_API_KEY` in `.env`. The bot requests metric units; feel free to customise the cog for imperial conversions.
-- **CoinGecko**: No API key required. The bot caches symbol ? coin ID mappings on first use to keep lookups snappy.
+- **OpenWeather**: Supply `OPENWEATHER_KEY` in `.env`. The bot requests metric units; feel free to customise the cog for imperial conversions.
+- **CoinGecko**: No API key required. The bot caches symbol-to-coin ID mappings on first use to keep lookups snappy.
 
 ## Event Automation
 - New members trigger a welcome embed in the configured channel (or fall back to `#general` / the guild system channel).
@@ -91,7 +97,7 @@ Run the automated test suite (requires `pytest` and `pytest-asyncio`, already li
 ```bash
 python -m pytest
 ```
-Tests cover the database manager’s guild configuration workflow.
+Tests cover the database manager's guild configuration workflow.
 
 ## Docker
 Build and run the bot in a containerised environment:
@@ -110,8 +116,8 @@ Volumes map `./data` and `./logs` so state persists across restarts. Environment
 ## Persistence Workflow
 - `core.database.DatabaseManager` wraps `sqlite3` calls with `asyncio.to_thread` for non-blocking access.
 - Tables:
-  - `points` (`user_id`, `balance`) – per-user currency balances
-  - `metadata` (`key`, `value`) – background job timestamps (e.g. `last_save`)
+  - `points` (`user_id`, `balance`) - per-user currency balances
+  - `metadata` (`key`, `value`) - background job timestamps (e.g. `last_save`)
   - `guild_settings` (`guild_id`, `prefix`, `welcome_channel_id`, `mod_role_id`, `admin_role_id`)
 - Running `python scripts/migrate.py` is idempotent and safe to repeat.
 
