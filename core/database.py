@@ -105,7 +105,11 @@ class DatabaseManager:
             with sqlite3.connect(self.path) as conn:
                 conn.row_factory = sqlite3.Row  # type: ignore[attr-defined]
                 cursor = conn.execute(
-                    "SELECT guild_id, prefix, welcome_channel_id, mod_role_id, admin_role_id FROM guild_settings WHERE guild_id = ?",
+                    """
+                    SELECT guild_id, prefix, welcome_channel_id, mod_role_id, admin_role_id
+                    FROM guild_settings
+                    WHERE guild_id = ?
+                    """,
                     (guild_id,),
                 )
                 row = cursor.fetchone()
