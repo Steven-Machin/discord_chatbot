@@ -1,15 +1,17 @@
-from typing import Optional
+from typing import Any, Optional, cast
 
 import discord
 from discord.ext import commands
 
+from core.bot_types import BotWithLogger
+
 
 class Moderation(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: BotWithLogger) -> None:
         self.bot = bot
 
     @property
-    def database(self):
+    def database(self) -> Any:
         return self.bot.database  # type: ignore[attr-defined]
 
     async def _get_required_role(
@@ -123,7 +125,12 @@ class Moderation(commands.Cog):
             await ctx.send("You can't kick yourself.")
             return
 
-        if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+        author = ctx.author
+        if not isinstance(author, discord.Member):
+            await ctx.send("This command can only be used in a server.")
+            return
+
+        if member.top_role >= author.top_role and author != ctx.guild.owner:
             await ctx.send("You can't kick someone with an equal or higher role.")
             return
 
@@ -167,7 +174,12 @@ class Moderation(commands.Cog):
             await ctx.send("You can't ban yourself.")
             return
 
-        if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+        author = ctx.author
+        if not isinstance(author, discord.Member):
+            await ctx.send("This command can only be used in a server.")
+            return
+
+        if member.top_role >= author.top_role and author != ctx.guild.owner:
             await ctx.send("You can't ban someone with an equal or higher role.")
             return
 
@@ -210,12 +222,12 @@ class Moderation(commands.Cog):
             return
 
         try:
-            bans = await ctx.guild.bans()
+            bans_iter = ctx.guild.bans()
         except discord.Forbidden:
             await ctx.send("I don't have permission to view bans.")
             return
 
-        for entry in bans:
+        async for entry in bans_iter:
             user = entry.user
             if user.name == name and user.discriminator == discriminator:
                 try:
@@ -236,4 +248,4 @@ class Moderation(commands.Cog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(Moderation(bot))
+    await bot.add_cog(Moderation(cast(BotWithLogger, bot)))

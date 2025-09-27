@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import sqlite3
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, cast
 
 import discord
 from discord.ext import commands
+
+from core.bot_types import BotWithLogger
 
 
 class Points(commands.Cog):
     """Track and award user points across servers."""
 
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: BotWithLogger) -> None:
         self.bot = bot
         self.db_path = bot.config.db_path  # type: ignore[attr-defined]
         self._init_lock = asyncio.Lock()
@@ -201,4 +203,4 @@ class Points(commands.Cog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(Points(bot))
+    await bot.add_cog(Points(cast(BotWithLogger, bot)))

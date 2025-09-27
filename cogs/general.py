@@ -1,10 +1,14 @@
+from typing import cast
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 
+from core.bot_types import BotWithLogger
+
 
 class General(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: BotWithLogger) -> None:
         self.bot = bot
 
     def _build_hello_embed(self, display_name: str) -> discord.Embed:
@@ -64,4 +68,4 @@ class General(commands.Cog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(General(bot))
+    await bot.add_cog(General(cast(BotWithLogger, bot)))

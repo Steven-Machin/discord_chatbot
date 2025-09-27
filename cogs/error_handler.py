@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from typing import cast
+
 from discord.ext import commands
+
+from core.bot_types import BotWithLogger
 
 
 class ErrorHandler(commands.Cog):
     """A cog for handling errors globally."""
 
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: BotWithLogger) -> None:
         self.bot = bot
 
     @commands.Cog.listener()
@@ -40,4 +44,4 @@ class ErrorHandler(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     """Load the cog."""
-    await bot.add_cog(ErrorHandler(bot))
+    await bot.add_cog(ErrorHandler(cast(BotWithLogger, bot)))

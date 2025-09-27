@@ -1,7 +1,11 @@
 import random
 
+from typing import cast
+
 import discord
 from discord.ext import commands
+
+from core.bot_types import BotWithLogger
 
 
 EIGHTBALL_RESPONSES = [
@@ -29,7 +33,7 @@ EIGHTBALL_RESPONSES = [
 
 
 class Fun(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: BotWithLogger) -> None:
         self.bot = bot
 
     @commands.command()
@@ -56,4 +60,4 @@ class Fun(commands.Cog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(Fun(bot))
+    await bot.add_cog(Fun(cast(BotWithLogger, bot)))

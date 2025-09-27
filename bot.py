@@ -4,13 +4,14 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import discord
 from discord.ext import commands
 
 from core.config import load_config
 from core.database import DatabaseManager
+from core.bot_types import BotWithLogger
 
 LOGS_DIR = Path("logs")
 COMMANDS_LOG = LOGS_DIR / "commands.log"
@@ -119,12 +120,13 @@ async def main() -> None:
 
     database = DatabaseManager(config.db_path, config.prefix)
 
-    bot = commands.Bot(command_prefix=_dynamic_prefix, intents=intents)
+    base_bot = commands.Bot(command_prefix=_dynamic_prefix, intents=intents)
+    bot = cast(BotWithLogger, base_bot)
     bot.config = config  # type: ignore[attr-defined]
     bot.database = database  # type: ignore[attr-defined]
-    bot.logger = bot_logger  # type: ignore[attr-defined]
-    bot.command_logger = command_logger  # type: ignore[attr-defined]
-    bot.error_logger = error_logger  # type: ignore[attr-defined]
+    bot.logger = bot_logger
+    bot.command_logger = command_logger
+    bot.error_logger = error_logger
     bot.activity_log_path = ACTIVITY_LOG  # type: ignore[attr-defined]
     bot._slash_synced = False  # type: ignore[attr-defined]  # noqa: SLF001
 
@@ -210,11 +212,11 @@ async def main() -> None:
             finally:
                 bot._slash_synced = True  # type: ignore[attr-defined]
 
-    async with bot:
+    async with base_bot:
         await bot.database.setup()  # type: ignore[attr-defined]
-        await load_extensions(bot, bot_logger)
+        await load_extensions(base_bot, bot_logger)
         bot_logger.info("Starting bot")
-        await bot.start(config.token)
+        await base_bot.start(config.token)
 
 
 if __name__ == "__main__":

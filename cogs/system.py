@@ -2,23 +2,26 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, cast
 
+import logging
 import discord
 from discord.ext import commands, tasks
 
+from core.bot_types import BotWithLogger
+
 
 class System(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: BotWithLogger) -> None:
         self.bot = bot
         self.background_save.start()
 
     @property
-    def database(self):
+    def database(self) -> Any:
         return self.bot.database  # type: ignore[attr-defined]
 
     @property
-    def logger(self):
+    def logger(self) -> logging.Logger:
         return self.bot.logger  # type: ignore[attr-defined]
 
     @commands.Cog.listener()
@@ -167,10 +170,10 @@ class System(commands.Cog):
             return None
         return channel
 
-    def cog_unload(self) -> None:
+    def cog_unload(self) -> None:  # type: ignore[override]
         if self.background_save.is_running():
             self.background_save.cancel()
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(System(bot))
+    await bot.add_cog(System(cast(BotWithLogger, bot)))

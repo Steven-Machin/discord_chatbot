@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, cast
 
 import aiohttp
 import discord
 from discord.ext import commands
+
+from core.bot_types import BotWithLogger
 
 
 COINGECKO_API = "https://api.coingecko.com/api/v3"
@@ -12,7 +14,7 @@ OPENWEATHER_API = "https://api.openweathermap.org/data/2.5/weather"
 
 
 class Api(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: BotWithLogger) -> None:
         self.bot = bot
         self._session: Optional[aiohttp.ClientSession] = None
         self._coin_map: Optional[Dict[str, Tuple[str, str]]] = None
@@ -169,4 +171,4 @@ class Api(commands.Cog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(Api(bot))
+    await bot.add_cog(Api(cast(BotWithLogger, bot)))
