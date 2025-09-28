@@ -1,4 +1,4 @@
-from typing import cast
+﻿from typing import cast
 
 import discord
 from discord import app_commands
@@ -31,16 +31,6 @@ class General(commands.Cog):
     async def hello_slash(self, interaction: discord.Interaction) -> None:
         embed = self._build_hello_embed(interaction.user.display_name)
         await interaction.response.send_message(embed=embed)
-
-    @commands.command()
-    async def ping(self, ctx: commands.Context) -> None:
-        latency_ms = round(self.bot.latency * 1000)
-        embed = discord.Embed(
-            title="Pong!",
-            description=f"Latency: `{latency_ms}ms`",
-            color=discord.Color.green(),
-        )
-        await ctx.send(embed=embed)
 
     @commands.command(name="setprefix", aliases=["prefix"])
     @commands.has_permissions(manage_guild=True)
