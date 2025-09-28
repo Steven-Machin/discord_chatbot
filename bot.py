@@ -2,6 +2,7 @@ import asyncio
 import importlib
 import logging
 import os
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional, cast
@@ -128,6 +129,7 @@ async def main() -> None:
     bot.command_logger = command_logger
     bot.error_logger = error_logger
     bot.activity_log_path = ACTIVITY_LOG  # type: ignore[attr-defined]
+    bot.launch_time = datetime.now(timezone.utc)  # type: ignore[attr-defined]
     bot._slash_synced = False  # type: ignore[attr-defined]  # noqa: SLF001
 
     @bot.listen("on_command")
