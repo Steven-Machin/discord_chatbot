@@ -65,7 +65,7 @@ def configure_logging() -> tuple[logging.Logger, logging.Logger, logging.Logger]
     return bot_logger, command_logger, error_logger
 
 
-async def _dynamic_prefix(bot: commands.Bot, message: discord.Message):
+async def _dynamic_prefix(bot: commands.Bot, message: discord.Message) -> commands.core.PrefixType:
     guild_id: Optional[int] = message.guild.id if message.guild else None
     base_prefix = await bot.database.get_prefix(guild_id)  # type: ignore[attr-defined]
     return commands.when_mentioned_or(base_prefix)(bot, message)

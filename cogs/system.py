@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Optional, cast
 
 import logging
 import discord
 from discord.ext import commands, tasks
 
 from core.bot_types import BotWithLogger
+from core.database import DatabaseManager
 
 
 class System(commands.Cog):
@@ -17,8 +18,8 @@ class System(commands.Cog):
         self.background_save.start()
 
     @property
-    def database(self) -> Any:
-        return self.bot.database  # type: ignore[attr-defined]
+    def database(self) -> DatabaseManager:
+        return cast(DatabaseManager, self.bot.database)  # type: ignore[attr-defined]
 
     @property
     def logger(self) -> logging.Logger:
