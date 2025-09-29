@@ -11,10 +11,14 @@ def format_timestamp(dt: datetime, *, include_timezone: bool = False) -> str:
         dt = dt.replace(tzinfo=timezone.utc)
     if include_timezone:
         return dt.isoformat(timespec="seconds")
-    return dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+    return (
+        dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+    )
 
 
-def truncate_message(message: str, max_length: int = 2000, *, ellipsis: str = "...") -> str:
+def truncate_message(
+    message: str, max_length: int = 2000, *, ellipsis: str = "..."
+) -> str:
     """Shorten a string to the given length while indicating truncation."""
     if max_length < 0:
         raise ValueError("max_length must be non-negative")
