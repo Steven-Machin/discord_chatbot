@@ -9,7 +9,6 @@ from typing import Optional, cast
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import CommandPrefixType
 
 from core.config import load_config
 from core.database import DatabaseManager
@@ -66,9 +65,7 @@ def configure_logging() -> tuple[logging.Logger, logging.Logger, logging.Logger]
     return bot_logger, command_logger, error_logger
 
 
-async def _dynamic_prefix(
-    bot: commands.Bot, message: discord.Message
-) -> CommandPrefixType:
+async def _dynamic_prefix(bot: commands.Bot, message: discord.Message) -> list[str]:
     guild_id: Optional[int] = message.guild.id if message.guild else None
     base_prefix = await bot.database.get_prefix(guild_id)  # type: ignore[attr-defined]
     return commands.when_mentioned_or(base_prefix)(bot, message)

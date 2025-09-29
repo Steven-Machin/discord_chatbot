@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, cast
 
 import discord
+from discord.ext import commands
 import pytest
 
+from core.bot_types import BotWithLogger
 from cogs.points import DAILY_REWARD, Points
+
+CommandCallback = Callable[..., Awaitable[Any]]
 
 
 class FakeDatabase:
@@ -36,11 +40,10 @@ class FakeDatabase:
 
 class FakeBot:
     def __init__(self) -> None:
-        self.database = FakeDatabase()
-        logger = logging.getLogger("PointsTest")
-        self.logger = logger
-        self.command_logger = logger
-        self.error_logger = logger
+        self.database: FakeDatabase = FakeDatabase()
+        self.logger: logging.Logger = logging.getLogger("PointsTest.bot")
+        self.command_logger: logging.Logger = logging.getLogger("PointsTest.commands")
+        self.error_logger: logging.Logger = logging.getLogger("PointsTest.errors")
 
     def get_user(self, user_id: int) -> Optional[discord.abc.User]:
         return None
@@ -84,10 +87,14 @@ class DummyContext:
 @pytest.mark.asyncio
 async def test_balance_command_sends_embed() -> None:
     bot = FakeBot()
-    cog = Points(bot)  # type: ignore[arg-type]
-    ctx = DummyContext(author=DummyUser(1, "Alice"))  # type: ignore[arg-type]
+    cog = Points(cast(BotWithLogger, bot))
+    ctx = DummyContext(author=DummyUser(1, "Alice"))
+    context = cast(commands.Context[Any], ctx)
 
-    await cog.balance.callback(cog, ctx)  # type: ignore[call-arg]
+    balance_callback = cast(
+        CommandCallback, Points.balance.callback.__get__(cog, Points)
+    )
+    await balance_callback(context)
 
     assert ctx.sent, "balance command should send an embed"
     assert ctx.sent[0].title == "Balance"
@@ -96,11 +103,13 @@ async def test_balance_command_sends_embed() -> None:
 @pytest.mark.asyncio
 async def test_daily_adds_points_for_new_user() -> None:
     bot = FakeBot()
-    cog = Points(bot)  # type: ignore[arg-type]
+    cog = Points(cast(BotWithLogger, bot))
     user = DummyUser(2, "Bob")
-    ctx = DummyContext(author=user)  # type: ignore[arg-type]
+    ctx = DummyContext(author=user)
+    context = cast(commands.Context[Any], ctx)
 
-    await cog.daily.callback(cog, ctx)  # type: ignore[call-arg]
+    daily_callback = cast(CommandCallback, Points.daily.callback.__get__(cog, Points))
+    await daily_callback(context)
 
     assert bot.database.balances[user.id] == DAILY_REWARD
     assert ctx.sent[-1].description == "You received 100 points!"
@@ -115,10 +124,14 @@ async def test_leaderboard_runs_without_error() -> None:
     await bot.database.add_balance(5, 50)
 
     members = {3: DummyUser(3, "Carol"), 4: DummyUser(4, "Dave")}
-    ctx = DummyContext(author=DummyUser(6, "Eve"), guild=DummyGuild(members))  # type: ignore[arg-type]
+    ctx = DummyContext(author=DummyUser(6, "Eve"), guild=DummyGuild(members))
+    context = cast(commands.Context[Any], ctx)
 
-    cog = Points(bot)  # type: ignore[arg-type]
-    await cog.leaderboard.callback(cog, ctx)  # type: ignore[call-arg]
+    cog = Points(cast(BotWithLogger, bot))
+    leaderboard_callback = cast(
+        CommandCallback, Points.leaderboard.callback.__get__(cog, Points)
+    )
+    await leaderboard_callback(context)
 
     assert ctx.sent, "leaderboard should result in an embed being sent"
     assert ctx.sent[0].title == "Leaderboard"
