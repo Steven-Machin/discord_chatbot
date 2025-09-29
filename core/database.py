@@ -215,6 +215,37 @@ class DatabaseManager:
         await asyncio.to_thread(execute)
         self._settings_cache.pop(guild_id, None)
 
+    async def get_metadata_value(self, key: str) -> Optional[str]:
+        """Fetch a metadata value for the supplied key if present."""
+        await self.setup()
+
+        def query() -> Optional[str]:
+            with sqlite3.connect(self.path) as conn:
+                conn.row_factory = sqlite3.Row  # type: ignore[attr-defined]
+                cursor = conn.execute(
+                    "SELECT value FROM metadata WHERE key = ?",
+                    (key,),
+                )
+                row = cursor.fetchone()
+                return str(row["value"]) if row else None
+
+        return await asyncio.to_thread(query)
+
+    async def set_metadata_value(self, key: str, value: str) -> None:
+        """Insert or update a metadata value for the supplied key."""
+        await self.setup()
+
+        def execute() -> None:
+            with sqlite3.connect(self.path) as conn:
+                conn.execute(
+                    "INSERT INTO metadata (key, value) VALUES (?, ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                    (key, value),
+                )
+                conn.commit()
+
+        await asyncio.to_thread(execute)
+
     async def get_balance(self, user_id: int) -> int:
         """Return the stored balance for the user, defaulting to zero."""
         await self.setup()
