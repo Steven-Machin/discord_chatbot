@@ -84,10 +84,10 @@ class DummyContext:
 @pytest.mark.asyncio
 async def test_balance_command_sends_embed() -> None:
     bot = FakeBot()
-    cog = Points(bot)
-    ctx = DummyContext(author=DummyUser(1, "Alice"))
+    cog = Points(bot)  # type: ignore[arg-type]
+    ctx = DummyContext(author=DummyUser(1, "Alice"))  # type: ignore[arg-type]
 
-    await cog.balance.callback(cog, ctx)
+    await cog.balance.callback(cog, ctx)  # type: ignore[call-arg]
 
     assert ctx.sent, "balance command should send an embed"
     assert ctx.sent[0].title == "Balance"
@@ -96,11 +96,11 @@ async def test_balance_command_sends_embed() -> None:
 @pytest.mark.asyncio
 async def test_daily_adds_points_for_new_user() -> None:
     bot = FakeBot()
-    cog = Points(bot)
+    cog = Points(bot)  # type: ignore[arg-type]
     user = DummyUser(2, "Bob")
-    ctx = DummyContext(author=user)
+    ctx = DummyContext(author=user)  # type: ignore[arg-type]
 
-    await cog.daily.callback(cog, ctx)
+    await cog.daily.callback(cog, ctx)  # type: ignore[call-arg]
 
     assert bot.database.balances[user.id] == DAILY_REWARD
     assert ctx.sent[-1].description == "You received 100 points!"
@@ -115,10 +115,10 @@ async def test_leaderboard_runs_without_error() -> None:
     await bot.database.add_balance(5, 50)
 
     members = {3: DummyUser(3, "Carol"), 4: DummyUser(4, "Dave")}
-    ctx = DummyContext(author=DummyUser(6, "Eve"), guild=DummyGuild(members))
+    ctx = DummyContext(author=DummyUser(6, "Eve"), guild=DummyGuild(members))  # type: ignore[arg-type]
 
-    cog = Points(bot)
-    await cog.leaderboard.callback(cog, ctx)
+    cog = Points(bot)  # type: ignore[arg-type]
+    await cog.leaderboard.callback(cog, ctx)  # type: ignore[call-arg]
 
     assert ctx.sent, "leaderboard should result in an embed being sent"
     assert ctx.sent[0].title == "Leaderboard"
