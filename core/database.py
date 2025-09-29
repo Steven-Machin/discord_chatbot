@@ -26,6 +26,7 @@ class DatabaseManager:
         self._settings_cache: Dict[int, GuildSettings] = {}
 
     async def setup(self) -> None:
+        """Initialise the database schema once in a threadsafe way."""
         async with self._setup_lock:
             if self._is_setup:
                 return
@@ -33,6 +34,7 @@ class DatabaseManager:
             self._is_setup = True
 
     def _initialise(self) -> None:
+        """Create the database directory and required tables."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with sqlite3.connect(self.path) as conn:
             conn.execute("PRAGMA journal_mode=WAL;")
@@ -68,6 +70,7 @@ class DatabaseManager:
     def _row_to_settings(
         self, guild_id: int, row: Optional[sqlite3.Row]
     ) -> GuildSettings:
+        """Map a row to GuildSettings, falling back to defaults when missing."""
         if row is None:
             return GuildSettings(
                 guild_id=guild_id,
@@ -95,6 +98,7 @@ class DatabaseManager:
     async def get_guild_settings(
         self, guild_id: int, *, use_cache: bool = True
     ) -> GuildSettings:
+        """Fetch stored guild settings, optionally using the in-memory cache."""
         await self.setup()
         if use_cache:
             cached = self._settings_cache.get(guild_id)
@@ -122,6 +126,7 @@ class DatabaseManager:
     async def _upsert_guild_fields(
         self, guild_id: int, values: Dict[str, Optional[Any]]
     ) -> None:
+        """Insert or update a subset of guild_settings columns."""
         if not values:
             return
         await self.setup()
@@ -146,15 +151,18 @@ class DatabaseManager:
     async def set_guild_prefix(
         self, guild_id: int, prefix: Optional[str]
     ) -> GuildSettings:
+        """Persist a custom prefix for the guild and return fresh settings."""
         normalised = prefix.strip() if isinstance(prefix, str) else None
         await self._upsert_guild_fields(guild_id, {"prefix": normalised or None})
         return await self.get_guild_settings(guild_id, use_cache=False)
 
     async def reset_guild_prefix(self, guild_id: int) -> GuildSettings:
+        """Clear the stored prefix so the guild uses the default."""
         await self._upsert_guild_fields(guild_id, {"prefix": None})
         return await self.get_guild_settings(guild_id, use_cache=False)
 
     async def get_prefix(self, guild_id: Optional[int]) -> str:
+        """Return the prefix for the guild, defaulting when no override exists."""
         if guild_id is None:
             return self.default_prefix
         settings = await self.get_guild_settings(guild_id)
@@ -163,18 +171,21 @@ class DatabaseManager:
     async def set_welcome_channel(
         self, guild_id: int, channel_id: Optional[int]
     ) -> GuildSettings:
+        """Store the welcome channel and return the updated settings."""
         await self._upsert_guild_fields(guild_id, {"welcome_channel_id": channel_id})
         return await self.get_guild_settings(guild_id, use_cache=False)
 
     async def set_moderator_role(
         self, guild_id: int, role_id: Optional[int]
     ) -> GuildSettings:
+        """Persist the moderator role id and return updated settings."""
         await self._upsert_guild_fields(guild_id, {"mod_role_id": role_id})
         return await self.get_guild_settings(guild_id, use_cache=False)
 
     async def set_admin_role(
         self, guild_id: int, role_id: Optional[int]
     ) -> GuildSettings:
+        """Persist the admin role id and return updated settings."""
         await self._upsert_guild_fields(guild_id, {"admin_role_id": role_id})
         return await self.get_guild_settings(guild_id, use_cache=False)
 
@@ -191,6 +202,7 @@ class DatabaseManager:
         return settings.admin_role_id
 
     async def clear_guild_settings(self, guild_id: int) -> None:
+        """Remove all stored settings for the guild and evict the cache."""
         await self.setup()
 
         def execute() -> None:
@@ -204,6 +216,7 @@ class DatabaseManager:
         self._settings_cache.pop(guild_id, None)
 
     async def get_balance(self, user_id: int) -> int:
+        """Return the stored balance for the user, defaulting to zero."""
         await self.setup()
 
         def query() -> int:
@@ -219,6 +232,7 @@ class DatabaseManager:
         return await asyncio.to_thread(query)
 
     async def add_balance(self, user_id: int, amount: int) -> int:
+        """Increment the user balance and return the new total."""
         await self.setup()
 
         def execute() -> int:
@@ -242,6 +256,7 @@ class DatabaseManager:
         return await asyncio.to_thread(execute)
 
     async def leaderboard(self, limit: int = 5) -> List[Tuple[int, int]]:
+        """Return the top users ordered by balance."""
         await self.setup()
 
         def query() -> List[Tuple[int, int]]:
@@ -259,6 +274,7 @@ class DatabaseManager:
         return await asyncio.to_thread(query)
 
     async def record_last_save(self, when: datetime) -> None:
+        """Persist the provided timestamp in the metadata table."""
         await self.setup()
         iso_value = when.isoformat(timespec="seconds")
 
@@ -274,6 +290,7 @@ class DatabaseManager:
         await asyncio.to_thread(execute)
 
     async def get_last_save(self) -> Optional[datetime]:
+        """Load the last recorded save timestamp if present."""
         await self.setup()
 
         def query() -> Optional[str]:
