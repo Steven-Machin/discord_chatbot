@@ -367,7 +367,7 @@ class Moderation(commands.Cog):
         name="kick",
         description="Kick a member from the server.",
     )
-    @app_commands.checks.guild_only()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(kick_members=True)
     @app_commands.checks.bot_has_permissions(kick_members=True)
     async def kick_slash(
@@ -465,7 +465,7 @@ class Moderation(commands.Cog):
         name="ban",
         description="Ban a member from the server.",
     )
-    @app_commands.checks.guild_only()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(ban_members=True)
     @app_commands.checks.bot_has_permissions(ban_members=True)
     async def ban_slash(
@@ -563,7 +563,7 @@ class Moderation(commands.Cog):
         name="unban",
         description="Unban a user by ID.",
     )
-    @app_commands.checks.guild_only()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(ban_members=True)
     @app_commands.checks.bot_has_permissions(ban_members=True)
     async def unban_slash(
