@@ -436,9 +436,7 @@ class Moderation(commands.Cog):
 
         embed = discord.Embed(
             title="Member Kicked",
-            description=(
-                f"{member.mention} was kicked.\nReason: {reason_text}"
-            ),
+            description=(f"{member.mention} was kicked.\nReason: {reason_text}"),
             color=discord.Color.orange(),
         )
         embed.set_footer(text=f"Action by {interaction.user.display_name}")
@@ -536,9 +534,7 @@ class Moderation(commands.Cog):
 
         embed = discord.Embed(
             title="Member Banned",
-            description=(
-                f"{member.mention} was banned.\nReason: {reason_text}"
-            ),
+            description=(f"{member.mention} was banned.\nReason: {reason_text}"),
             color=discord.Color.red(),
         )
         embed.set_footer(text=f"Action by {interaction.user.display_name}")
@@ -655,4 +651,3 @@ class Moderation(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Moderation(cast(BotWithLogger, bot)))
-
