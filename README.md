@@ -106,6 +106,11 @@ docker-compose.yml     # Orchestrates the bot with volume mounts for data/logs
 - Run the test suite: `pytest`
 - Type-check with mypy: `mypy --ignore-missing-imports .`
 
+## Pre-commit Hooks
+- Run `pip install pre-commit`
+- Run `pre-commit install`
+- Hooks will now run automatically on staged files when committing.
+
 ## Code Style
 - This project uses [Black](https://black.readthedocs.io/) for automatic formatting. Run `black .` before committing changes.
 - `flake8` enforces additional linting rules with a 120 character line-length cap.
@@ -145,3 +150,4 @@ Volumes map `./data` and `./logs` so state persists across restarts. Environment
 - Role-based authorization layered atop Discord permissions
 - Containerisation (Docker) and automated CI (GitHub Actions)
 - Robust persistence patterns with SQLite plus async-friendly coordination
+
