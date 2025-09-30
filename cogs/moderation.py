@@ -5,7 +5,7 @@ from typing import Any, Optional, cast
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.ext.commands import guild_only
+from discord.ext.commands import guild_only  # type: ignore[attr-defined]
 
 from core.bot_types import BotWithLogger
 
