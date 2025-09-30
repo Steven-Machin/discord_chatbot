@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/psf/black
-    rev: 24.0.0
+    rev: 24.4.2
     hooks:
       - id: black
         language_version: python3
@@ -15,3 +15,4 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-setuptools]
+

@@ -367,6 +367,10 @@ class Moderation(commands.Cog):
         name="kick",
         description="Kick a member from the server.",
     )
+    @app_commands.describe(
+        member="Member to kick from the server.",
+        reason="Optional reason for the kick.",
+    )
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(kick_members=True)
     @app_commands.checks.bot_has_permissions(kick_members=True)
@@ -444,7 +448,7 @@ class Moderation(commands.Cog):
             color=discord.Color.orange(),
         )
         embed.set_footer(text=f"Action by {interaction.user.display_name}")
-        await self._send_interaction_message(interaction, embed=embed)
+        await self._send_interaction_message(interaction, embed=embed, ephemeral=True)
         self._log_moderation_action(
             guild,
             interaction.user,
@@ -464,6 +468,10 @@ class Moderation(commands.Cog):
     @app_commands.command(
         name="ban",
         description="Ban a member from the server.",
+    )
+    @app_commands.describe(
+        member="Member to ban from the server.",
+        reason="Optional reason for the ban.",
     )
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(ban_members=True)
@@ -542,7 +550,7 @@ class Moderation(commands.Cog):
             color=discord.Color.red(),
         )
         embed.set_footer(text=f"Action by {interaction.user.display_name}")
-        await self._send_interaction_message(interaction, embed=embed)
+        await self._send_interaction_message(interaction, embed=embed, ephemeral=True)
         self._log_moderation_action(
             guild,
             interaction.user,
@@ -562,6 +570,10 @@ class Moderation(commands.Cog):
     @app_commands.command(
         name="unban",
         description="Unban a user by ID.",
+    )
+    @app_commands.describe(
+        user_id="ID of the user to unban.",
+        reason="Optional reason for the unban.",
     )
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(ban_members=True)
@@ -635,7 +647,7 @@ class Moderation(commands.Cog):
         embed.add_field(name="Reason", value=reason_text, inline=False)
         embed.set_footer(text=f"Action by {interaction.user.display_name}")
 
-        await self._send_interaction_message(interaction, embed=embed)
+        await self._send_interaction_message(interaction, embed=embed, ephemeral=True)
         self._log_moderation_action(
             guild,
             interaction.user,
