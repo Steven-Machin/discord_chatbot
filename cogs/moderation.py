@@ -5,6 +5,7 @@ from typing import Any, Optional, cast
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.ext.commands import guild_only
 
 from core.bot_types import BotWithLogger
 
@@ -68,18 +69,16 @@ class Moderation(commands.Cog):
         embed: Optional[discord.Embed] = None,
         ephemeral: bool = False,
     ) -> None:
+        payload: dict[str, Any] = {"ephemeral": ephemeral}
+        if content is not None:
+            payload["content"] = content
+        if embed is not None:
+            payload["embed"] = embed
+
         if interaction.response.is_done():
-            await interaction.followup.send(
-                content=content,
-                embed=embed,
-                ephemeral=ephemeral,
-            )
+            await interaction.followup.send(**payload)
         else:
-            await interaction.response.send_message(
-                content=content,
-                embed=embed,
-                ephemeral=ephemeral,
-            )
+            await interaction.response.send_message(**payload)
 
     async def _enforce_role_interaction(
         self,
@@ -171,6 +170,7 @@ class Moderation(commands.Cog):
         )
 
     @commands.command(name="setmodrole")
+    @guild_only()
     @commands.has_permissions(manage_guild=True)
     async def setmodrole(
         self,
@@ -196,6 +196,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="setadminrole")
+    @guild_only()
     @commands.has_permissions(manage_guild=True)
     async def setadminrole(
         self,
@@ -221,6 +222,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
+    @guild_only()
     @commands.has_permissions(kick_members=True)
     @commands.bot_has_permissions(kick_members=True)
     async def kick(
@@ -270,6 +272,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
+    @guild_only()
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def ban(
@@ -319,6 +322,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
+    @guild_only()
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def unban(self, ctx: commands.Context, *, tag: str) -> None:
