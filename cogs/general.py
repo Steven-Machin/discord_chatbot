@@ -1,10 +1,12 @@
-﻿from typing import cast
+﻿from typing import Sequence, cast
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from core.bot_types import BotWithLogger
+
+POLL_EMOJIS: tuple[str, ...] = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣")
 
 
 class General(commands.Cog):
@@ -20,10 +22,66 @@ class General(commands.Cog):
         embed.set_footer(text=f"Requested by {display_name}")
         return embed
 
+    def _build_poll_embed(
+        self,
+        question: str,
+        options: Sequence[str],
+        author_display_name: str,
+    ) -> discord.Embed:
+        description = "\n".join(
+            f"{emoji} {option}" for emoji, option in zip(POLL_EMOJIS, options)
+        )
+        embed = discord.Embed(
+            title=question,
+            description=description,
+            color=discord.Color.blurple(),
+        )
+        embed.set_footer(text=f"Poll created by {author_display_name}")
+        return embed
+
     @commands.command()
     async def hello(self, ctx: commands.Context) -> None:
         embed = self._build_hello_embed(ctx.author.display_name)
         await ctx.send(embed=embed)
+
+    @commands.command(name="poll")
+    async def poll(self, ctx: commands.Context, question: str, *options: str) -> None:
+        question_text = question.strip()
+        if not question_text:
+            await ctx.send("Please provide a question for the poll.")
+            return
+
+        cleaned_options = [option.strip() for option in options if option.strip()]
+
+        if len(cleaned_options) < 2:
+            await ctx.send(
+                "Please provide between 2 and 5 options for the poll. "
+                'Example: `!poll "Your question" "Option 1" "Option 2"`'
+            )
+            return
+
+        if len(cleaned_options) > len(POLL_EMOJIS):
+            await ctx.send("Polls can only have up to 5 options.")
+            return
+
+        embed = self._build_poll_embed(
+            question_text,
+            cleaned_options,
+            ctx.author.display_name,
+        )
+        message: discord.Message = await ctx.send(embed=embed)
+
+        for emoji in POLL_EMOJIS[: len(cleaned_options)]:
+            try:
+                await message.add_reaction(emoji)
+            except discord.HTTPException as exc:
+                self.bot.logger.warning(
+                    "Failed to add poll reaction %s for message %s: %s",
+                    emoji,
+                    message.id,
+                    exc,
+                )
+                break
 
     @app_commands.command(
         name="hello", description="Get a friendly hello from the bot."
