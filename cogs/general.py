@@ -39,6 +39,31 @@ class General(commands.Cog):
         embed.set_footer(text=f"Poll created by {author_display_name}")
         return embed
 
+    def _build_serverinfo_embed(self, guild: discord.Guild) -> discord.Embed:
+        member_total = guild.member_count
+        if member_total is None:
+            member_total = guild.approximate_member_count
+
+        embed = discord.Embed(
+            title=f"Server Info — {guild.name}",
+            color=discord.Color.blurple(),
+        )
+        embed.add_field(
+            name="Members",
+            value=f"{member_total:,}" if member_total is not None else "Unavailable",
+            inline=True,
+        )
+        embed.add_field(name="Roles", value=str(len(guild.roles)), inline=True)
+        embed.add_field(
+            name="Created",
+            value=discord.utils.format_dt(guild.created_at, style="F"),
+            inline=False,
+        )
+        if guild.icon:
+            embed.set_thumbnail(url=guild.icon.url)
+        embed.set_footer(text=f"Server ID: {guild.id}")
+        return embed
+
     @commands.command()
     async def hello(self, ctx: commands.Context) -> None:
         embed = self._build_hello_embed(ctx.author.display_name)
@@ -82,6 +107,16 @@ class General(commands.Cog):
                     exc,
                 )
                 break
+
+    @commands.command(name="serverinfo")
+    async def serverinfo(self, ctx: commands.Context) -> None:
+        guild = ctx.guild
+        if guild is None:
+            await ctx.send("This command can only be used in a server.")
+            return
+
+        embed = self._build_serverinfo_embed(guild)
+        await ctx.send(embed=embed)
 
     @app_commands.command(
         name="hello", description="Get a friendly hello from the bot."
