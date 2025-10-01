@@ -7,6 +7,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional, cast
 
+from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 
@@ -112,6 +113,14 @@ def _format_location(ctx: commands.Context) -> tuple[str, str]:
 
 
 async def main() -> None:
+    load_dotenv()
+    token_value = os.getenv("DISCORD_TOKEN")
+    if token_value is None or not token_value.strip():
+        print("DISCORD_TOKEN environment variable is not set. Aborting startup.")
+        return
+
+    token = token_value.strip()
+
     config = load_config()
     bot_logger, command_logger, error_logger = configure_logging()
 
@@ -218,7 +227,7 @@ async def main() -> None:
         await bot.database.setup()  # type: ignore[attr-defined]
         await load_extensions(base_bot, bot_logger)
         bot_logger.info("Starting bot")
-        await base_bot.start(config.token)
+        await base_bot.start(token)
 
 
 if __name__ == "__main__":
