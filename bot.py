@@ -14,6 +14,7 @@ from discord.ext import commands
 from core.config import load_config
 from core.database import DatabaseManager
 from core.bot_types import BotWithLogger
+import keep_alive
 
 LOGS_DIR = Path("logs")
 COMMANDS_LOG = LOGS_DIR / "commands.log"
@@ -114,6 +115,7 @@ def _format_location(ctx: commands.Context) -> tuple[str, str]:
 
 async def main() -> None:
     load_dotenv()
+    keep_alive.start()
     token_value = os.getenv("DISCORD_TOKEN")
     if token_value is None or not token_value.strip():
         print("DISCORD_TOKEN environment variable is not set. Aborting startup.")
